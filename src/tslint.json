@@ -13,6 +13,7 @@
             true,
             "element",
             "app",
+            "wmap",
             "kebab-case"
         ]
     }
