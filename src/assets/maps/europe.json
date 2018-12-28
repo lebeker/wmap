@@ -1,0 +1,10 @@
+{
+    "name": "Europe",
+    "geojson":  "/assets/geojson/ne_110m_land.geojson",
+    "projection" : {
+        "type": "Albers",
+        "scale": 1780,
+        "rotate": [-30, 10],
+        "center": [-10, 55.313]
+    }
+}

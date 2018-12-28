@@ -1,0 +1,8 @@
+.container {
+    position: relative;
+    h1, svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+}
