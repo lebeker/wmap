@@ -1,8 +1,12 @@
 {
     "extends": "../tslint.json",
     "rules": {
-      "quotemark": [ true, "double" ],
-      "curly": [true, "as-needed"],
+        "prefer-const": false,
+        "quotemark": [
+            true,
+            "double"
+        ],
+        "curly": false,
         "directive-selector": [
             true,
             "attribute",
