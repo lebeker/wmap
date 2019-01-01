@@ -9,4 +9,28 @@
         stroke: yellow;
         stroke-width: 1px;
     }
+    .toolbox {
+        z-index: 10000;
+        position: absolute;
+        right: 0;
+        .button {
+            padding: 2px;
+            margin: 2px;
+            float: left;
+            border: solid 1px gray;
+            border-radius: 3px;
+            background: lightgray;
+            cursor: pointer;
+        }
+        .button :hover {
+            background: white;
+        }
+        select {
+            height: 22px;
+            margin: 2px;
+            float: left;
+            border-radius: 3px;
+            min-width: 50px;
+        }
+    }
 }

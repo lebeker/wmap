@@ -36,8 +36,6 @@ export class Line extends Model {
                         end: p2pt(p[1])
                     }));
                     p0 = p2pt(p[1]);
-//                    if (Number.isNaN(p0.x))
-                        console.log("NAN? :", p0);
                     break;
                 case "V":
                     p[1][1] = p[1][0];
@@ -58,6 +56,12 @@ export class Line extends Model {
                     }));
                     break;
                 case "Z":
+                    lines.push(new Line({
+                        start: new Point(p0),
+                        end: new Point(lines[0].start)
+                    }));
+                    console.log("l0: ", lines[0]);
+                    console.log("lz: ", lines[lines.length - 1]);
                     break;
                 default:
                     throw new Error("Not Supported(yet) operation (SQTA) ~ " + p[0]);

@@ -1,0 +1,6 @@
+<div *ngIf="visible" class="overlap" (click)="close($event)">
+    <div class="form">
+        Name: <input [(ngModel)]="population.name" />
+        Size: <input [(ngModel)]="population.size" />
+    </div>
+</div>
