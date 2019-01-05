@@ -141,7 +141,11 @@ export class MapComponent {
         this.populations.push(ppl);
         this.editPopulation();
     }
-
+    selectPopulation(e) {
+        let pname = e.target.value;
+        console.log(pname, e);
+        this.population = this.populations.find(p => p.name === pname);
+    }
     editPopulation() {
         this.openDlgPopulation = true;
     }
