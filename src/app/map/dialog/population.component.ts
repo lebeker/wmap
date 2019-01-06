@@ -2,6 +2,7 @@ import * as d3 from "d3";
 import {Component, EventEmitter, Input, Output} from "@angular/core";
 import {ActivatedRoute} from "@angular/router";
 import {Population} from "../../models/population";
+import {Color} from "../../models/color";
 
 @Component({
     selector: "wmap-dialog-population",
@@ -18,7 +19,9 @@ export class PopulationDialogComponent {
     @Output()
     populationChange = new EventEmitter();
 
-    change(event) {
+    test = "test";
+    showColorPicker = false;
+    change(event?: any) {
         this.populationChange.emit(this.population);
     }
 
@@ -27,5 +30,13 @@ export class PopulationDialogComponent {
 
         this.visible = false;
         this.visibleChange.emit(false);
+    }
+
+    openColorPicker() {
+        this.showColorPicker = true;
+    }
+
+    get pcolor() {
+        return this.population.color.toString();
     }
 }

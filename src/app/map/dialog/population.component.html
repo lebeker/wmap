@@ -1,6 +1,15 @@
 <div *ngIf="visible" class="overlap" (click)="close($event)">
     <div class="form">
-        Name: <input [(ngModel)]="population.name" />
-        Size: <input [(ngModel)]="population.size" />
+        <div><label for="pname">Name: </label><input id="pname" [(ngModel)]="population.name" /></div>
+        <div><label for="psize">Size: </label><input id="psize" [(ngModel)]="population.size" /></div>
+        <div>
+            <label for="pcolor">Color: </label><span id="pcolor" class="color" (click)="openColorPicker($event)" [style.backgroundColor]="pcolor"></span>
+            <wmap-color-picker
+                [(visible)]="showColorPicker"
+                [color]="population.color"
+                [style.position]="'absolute'"
+            ></wmap-color-picker>
+        </div>
+
     </div>
 </div>

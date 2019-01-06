@@ -6,6 +6,7 @@
             true,
             "double"
         ],
+        "no-bitwise": false,
         "curly": false,
         "directive-selector": [
             true,

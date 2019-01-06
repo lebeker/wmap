@@ -6,6 +6,8 @@ import {WMap} from "../models/wmap";
 import {Point} from "../models/point";
 import {Polygon} from "../models/polygon";
 import {Population} from "../models/population";
+import {Line} from "../models/line";
+import {Color} from "../models/color";
 
 @Component({
     selector: "wmap-map",
@@ -82,7 +84,6 @@ export class MapComponent {
             let d = path.getAttribute("d");
             let uid = (new Date).getTime() + "" + Math.random() * 10000;
             path.setAttribute("uid", uid);
-            console.log("UID created: " + uid);
             this.terrains[uid] = Polygon.fromPath(d);
         }
 
@@ -94,7 +95,6 @@ export class MapComponent {
     mousemove(e) {
         const el = e.target;
         if (el.tagName !== "path") {
-            console.log(el.tagName);
             return;
         }
         let uid = el.getAttribute("uid");
@@ -106,23 +106,15 @@ export class MapComponent {
 
         let tsl = d3.select("g.tessellate");
 
-        let pe = new Point({x: e.offsetX, y: e.offsetY}),
-            tlines = terrain[0].lines.slice(0),
-            p0 = terrain[0].lines[0].start,
-            p1 = terrain[0].lines[0].end,
-            data = [pe, p0, p1];
+        let pe = new Point({x: e.offsetX, y: e.offsetY});
+        let data: Point[] = [pe],
+            closestPoints: Point[] = <Array<Point>>terrain.reduce((a, t) => a || this._searchClosestPoints(pe, t), null);
 
-        tlines = tlines
-            .filter(l => l.start.x > 0 && l.start.y > 0 && l.start.x < this.width && l.start.y < this.height)
-            .sort((l1, l2) => {
-            return pe.dist(l1.start) + pe.dist(l1.end) - l1.start.dist(l1.end)
-                - pe.dist(l2.start) - pe.dist(l2.end) + l2.start.dist(l2.end);
-        });
-
-        p0 = tlines[0].start;
-        p1 = tlines[0].end;
-        data = [pe, p0, p1];
-
+        if (closestPoints) {
+            data = data.concat(...closestPoints);
+        } else {
+            data = Polygon.triangle(pe).vertices();
+        }
         tsl.selectAll("path").remove();
         tsl.selectAll("circle").remove();
         tsl.selectAll("circle")
@@ -135,15 +127,28 @@ export class MapComponent {
             .attr("fill", "green");
     }
 
+    protected _searchClosestPoints(pe: Point, poly: Polygon, maxDist: number = 30): Point[] {
+        let lines: Line[] = poly.lines
+            .filter(l =>
+                l.start.x > 0 && l.start.y > 0 && l.start.x < this.width && l.start.y < this.height
+                && pe.dist(l.start) < maxDist
+            )
+            .sort((l1, l2) => {
+                return pe.dist(l1.start) + pe.dist(l1.end) - l1.start.dist(l1.end)
+                    - pe.dist(l2.start) - pe.dist(l2.end) + l2.start.dist(l2.end);
+            });
+        if (!lines.length) return null;
+        return [lines[0].start, lines[0].end];
+    }
+
     createPopulation() {
-        let ppl = new Population();
+        let ppl = new Population({color: Color.random()});
         this.population = ppl;
         this.populations.push(ppl);
         this.editPopulation();
     }
     selectPopulation(e) {
         let pname = e.target.value;
-        console.log(pname, e);
         this.population = this.populations.find(p => p.name === pname);
     }
     editPopulation() {

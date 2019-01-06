@@ -8,12 +8,14 @@ import {MapService} from "./map/map.service";
 import {HttpClientModule} from "@angular/common/http";
 import {PopulationDialogComponent} from "./map/dialog/population.component";
 import {FormsModule} from "@angular/forms";
+import {ColorPickerComponent} from "./map/dialog/color.picker.component";
 
 @NgModule({
     declarations: [
         AppComponent,
         MapComponent,
-        PopulationDialogComponent
+        PopulationDialogComponent,
+        ColorPickerComponent
     ],
     imports: [
         BrowserModule,

@@ -1,0 +1,15 @@
+<div *ngIf="visible" class="container" (mousedown)="mdown($event)" (mouseup)="mup($event)">
+    <div class="picker_hue" [style.backgroundColor]="rgba" (mousemove)="updH($event)">
+        <div class="pointer h" [style.left]="ph"></div>
+    </div>
+    <div class="picker_sl" [style.backgroundColor]="rgba"  (mousemove)="updSL($event)">
+        <div class="pointer sl" [style.top]="psl.y" [style.left]="psl.x"></div>
+    </div>
+    <div class="picker_alpha" [style.backgroundImage]="alphaGradient">
+        <div class="pointer a" [style.top]="pa"></div>
+    </div>
+
+    <div class="result">
+        <button (click)="close($event)">OK</button>
+    </div>
+</div>
