@@ -25,6 +25,7 @@ export class MapComponent {
     title: string;
     map: WMap = null;
     terrains: {[key: string]: Polygon[]} = {};
+    tmpPoints: Point[] = [];
     constructor(
         private _route: ActivatedRoute,
         private _mapSvc: MapService
@@ -111,11 +112,27 @@ export class MapComponent {
     clicked(e) {
         if (!this.population) return;
 
-        const el = e.target;
-        let uid = el.getAttribute("uid");
+        let popArea: Polygon,
+            newPoly: Polygon;
+
+        [newPoly, popArea] = this.polyCursorAdjacent(e);
+        if (!newPoly) return;
+
+        if (popArea) {
+            popArea.merge(newPoly);
+        } else {
+            this.population.areas.push(newPoly);
+        }
+
+        this.drawPopulations();
+    }
+
+    polyCursorAdjacent(event: any): [Polygon, Polygon] {
+        const el = event.target,
+            uid = el.getAttribute("uid");
         if (!uid) {
             console.log("No UID." + el.tagName);
-            return;
+            return [null, null];
         }
 
         let ppl = this.populations.find(p => p.name === uid);
@@ -125,67 +142,48 @@ export class MapComponent {
             return;
         }
 
-        let terrain = this.terrains[uid],
-            popArea: Polygon,
-            pe = new Point({x: e.offsetX, y: e.offsetY}),
-            data: Point[] = null,
-            closestPoints: Point[];
+        let popArea: Polygon,
+            newPoly: Polygon,
+            pe = new Point({x: event.offsetX, y: event.offsetY});
 
-        [popArea, closestPoints] = <any>this.population.areas.reduce(
-            (a, t) => (a[1] && a) || [t, this._searchClosestPoints(pe, t)],
-            [null, null]
-        );
-        if (closestPoints) {
-            popArea.addVertice(pe, new Line({start: closestPoints[0], end: closestPoints[1]}));
-        } else {
-            closestPoints = terrain && <Array<Point>>terrain.reduce((a, t) => a || this._searchClosestPoints(pe, t), null);
-            this.population.areas.push(
-                closestPoints
-                    ? Polygon.fromVertices(
-                        [pe].concat(...closestPoints)
-                      )
-                    : Polygon.triangle(pe)
+        if (this.population) {
+            // Search populations
+            [popArea, newPoly] = <any>this.population.areas.reduce(
+                (a, t) => (a[1] && a) || [t, this._getNewPoly(pe, t)],
+                [null, null]
             );
+            if (newPoly)
+                return [newPoly, popArea];
         }
 
-        this.drawPopulations();
+        let terrain = this.terrains[uid];
+        newPoly = terrain && <Polygon>terrain.reduce((a, t) => a || this._getNewPoly(pe, t), null);
+
+        return [newPoly || Polygon.triangle(pe), null];
     }
 
     mousemove(e) {
-        const el = e.target;
-        if (el.tagName !== "path") {
-            return;
-        }
-        let uid = el.getAttribute("uid");
-
-        let terrain = this.terrains[uid];
+        let [newPoly, ] = this.polyCursorAdjacent(e);
+        if (!newPoly) return;
 
         d3.select("g.tessellate").remove();
-        d3.select("svg").append("g").attr("class", "tessellate");
-
+        d3.select("svg").append("g").attr("class", "tessellate").attr("pointer-events", "none");
         let tsl = d3.select("g.tessellate");
 
-        let pe = new Point({x: e.offsetX, y: e.offsetY});
-        let data: Point[] = [pe],
-            closestPoints: Point[] = null;
-
-        closestPoints = this.population
-            && <any>this.population.areas.reduce((a, t) => a || this._searchClosestPoints(pe, t), null);
-        closestPoints = closestPoints
-            || (terrain && <Array<Point>>terrain.reduce((a, t) => a || this._searchClosestPoints(pe, t), null));
-
-        if (closestPoints) {
-            data = data.concat(...closestPoints);
-        } else {
-            data = Polygon.triangle(pe).vertices();
-        }
         tsl.selectAll("path").remove();
+        tsl.selectAll("path")
+            .data([newPoly])
+            .enter()
+            .append("path")
+            .attr("fill", "yellow")
+            .attr("d", d => d.toPath());
+
         tsl.selectAll("circle").remove();
         tsl.selectAll("circle")
-            .data(data)
+            .data(newPoly.vertices())
             .enter()
             .append("circle")
-            .attr("pointer-events", "none")
+
             .attr("cx", (_d) => _d.x)
             .attr("cy", (_d) => _d.y)
             .attr("r", 5)
@@ -198,23 +196,19 @@ export class MapComponent {
             .filter(l =>
                 l.start.x > 0 && l.start.y > 0 && l.start.x < this.width && l.start.y < this.height
                 && pe.dist(l.start) < maxDist
-            )
-            .sort((l1, l2) => {
-                return pe.dist(l1.start) + pe.dist(l1.end) - l1.start.dist(l1.end)
-                    - pe.dist(l2.start) - pe.dist(l2.end) + l2.start.dist(l2.end);
-            });
+            );
         if (!lines.length) return null;
 
         let vertices = lines.reduce((a, l) => a.concat(...l.vertices()), []);
 
         let nlines = vertices.map( v => new Line({start: pe, end: v}))
-            .filter(l => lines.reduce((a, _l) => a || _l.isIntersect(l), false));
+            .filter(l => !lines.reduce((a, _l) => a || _l.isIntersect(l), false));
 
         let nvertices = nlines.reduce((a, l) => a.concat(...l.vertices()), []);
 
-        // remove doublicates
-        nvertices.reduce((a, v) => a.reduce((_a, _v) => _a || _v.eq(v), false) ? a : a.concat(v), []);
-
+        // remove duplicates
+        nvertices = nvertices.reduce((a, v) => a.reduce((_a, _v) => _a || _v.eq(v), false) ? a : a.concat(v), []);
+//        console.log("pe:" + pe, nvertices);
         return Polygon.fromVertices(nvertices);
     }
 

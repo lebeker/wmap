@@ -55,6 +55,32 @@ export class Polygon extends Model {
         return poly;
     }
 
+    box(): Point[] {
+        let tl: Point, tr: Point, br: Point, bl: Point;
+        for (let v of this.vertices()) {
+            tl = tl ? new Point({x: Math.min(tl.x, v.x), y: Math.min(tl.y, v.y)}) : v;
+            tr = tr ? new Point({x: Math.max(tr.x, v.x), y: Math.min(tr.y, v.y)}) : v;
+            br = br ? new Point({x: Math.max(br.x, v.x), y: Math.max(br.y, v.y)}) : v;
+            bl = bl ? new Point({x: Math.min(bl.x, v.x), y: Math.max(bl.y, v.y)}) : v;
+        }
+        return [tl, tr, br, bl];
+    }
+
+    isIntersect(poly: Polygon) {
+        let bx = this.box,
+            pbx = poly.box,
+            inb = (p: Point, box: any) => !(p.x < box[0].x || p.x > box[1].x || p.y > box[2].y || p.y < box[0].y);
+
+        if (!pbx.reduce((a, v) => a || inb(v, bx), false)
+         && !bx.reduce((a, v) => a || inb(v, pbx), false)
+        ) return false;
+
+        return poly.lines.reduce((a, pl) =>
+            a || this.lines.reduce((_a, l) => _a || l.isIntersect(pl), false),
+            false
+        );
+    }
+
     merge(p: Polygon) {
         let plines = p.lines.splice(0),
             inx = -1, pinx = -1, cnt = 0, i = 0;

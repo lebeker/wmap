@@ -6,10 +6,10 @@
         left: 0;
     }
     .tessellate {
-        pointer-events: none;
+        /* pointer-events: none; // topmost? */
         stroke: yellow;
         stroke-width: 1px;
-        circle {
+        circle, path {
             pointer-events: none;
         }
     }

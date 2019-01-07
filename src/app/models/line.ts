@@ -88,8 +88,14 @@ export class Line extends Model {
             lmxx = Math.max(l.start.x, l.end.x),
             lmxy = Math.max(l.start.y, l.end.y);
 
-        if (lmx > tmx && lmx < tmxx && lmxy < tmxy && lmxy > tmy) return true;
-        if (tmx > lmx && tmx < lmxx && tmxy < lmxy && tmxy > lmy) return true;
+        if (lmx > tmx && lmx < tmxx && lmxy < tmxy && lmxy > tmy) {
+        //    console.log(this + " intsq " + l);
+            return true;
+        }
+        if (tmx > lmx && tmx < lmxx && tmxy < lmxy && tmxy > lmy) {
+        //    console.log(this + " intsq " + l);
+            return true;
+        }
 
         return false;
     }
