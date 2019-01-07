@@ -77,4 +77,35 @@ export class Line extends Model {
             p = (a + b + c) / 2;
         return (2 / c) * ((p * (p - a) * (p - b) * (p - c)) ** 0.5);
     }
+
+    isIntersect(l: Line): boolean {
+        let tmx = Math.min(this.start.x, this.end.x),
+            tmy = Math.min(this.start.y, this.end.y),
+            lmx = Math.min(l.start.x, l.end.x),
+            lmy = Math.min(l.start.y, l.end.y),
+            tmxx = Math.max(this.start.x, this.end.x),
+            tmxy = Math.max(this.start.y, this.end.y),
+            lmxx = Math.max(l.start.x, l.end.x),
+            lmxy = Math.max(l.start.y, l.end.y);
+
+        if (lmx > tmx && lmx < tmxx && lmxy < tmxy && lmxy > tmy) return true;
+        if (tmx > lmx && tmx < lmxx && tmxy < lmxy && tmxy > lmy) return true;
+
+        return false;
+    }
+
+    vertices(): Point[] {
+        return [this.start, this.end];
+    }
+
+    toPath(): string {
+        return `M${this.start.x},${this.start.y}L${this.end.x},${this.end.y}Z`;
+    }
+
+    toString() { return `{"start":${this.start},"end":${this.end}}`; }
+
+    eq(l: Line) {
+        return (this.start.eq(l.start) && this.end.eq(l.end))
+            || (this.start.eq(l.end) && this.end.eq(l.start));
+    }
 }

@@ -6,8 +6,12 @@
         left: 0;
     }
     .tessellate {
+        pointer-events: none;
         stroke: yellow;
         stroke-width: 1px;
+        circle {
+            pointer-events: none;
+        }
     }
     .toolbox {
         z-index: 10000;
