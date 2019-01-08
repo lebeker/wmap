@@ -5,10 +5,12 @@ import {Point} from "./point";
 import {createSrcToOutPathMapper} from "@angular/compiler-cli/src/transformers/program";
 
 export class Polygon extends Model {
-
+    protected _uid: any;
+    get uid(): any { return this._uid; }
     constructor(data?: any) {
         super(data);
         this.lines = (this.lines || []).map(l => l instanceof Line ? l : new Line(l));
+        this._uid = (new Date).getTime() + "" + Math.random() * 10000;
     }
     blurred: boolean;
     lines: Line[];
@@ -41,7 +43,7 @@ export class Polygon extends Model {
     }
 
     static fromVertices(points: Point[]): Polygon {
-        if (points.length < 3) return null;
+        // if (points.length < 3) return null;
 
         let p0 = null,
             poly = new Polygon();
@@ -67,8 +69,8 @@ export class Polygon extends Model {
     }
 
     isIntersect(poly: Polygon) {
-        let bx = this.box,
-            pbx = poly.box,
+        let bx: any = this.box,
+            pbx: any = poly.box,
             inb = (p: Point, box: any) => !(p.x < box[0].x || p.x > box[1].x || p.y > box[2].y || p.y < box[0].y);
 
         if (!pbx.reduce((a, v) => a || inb(v, bx), false)
@@ -113,7 +115,8 @@ export class Polygon extends Model {
         let path = "", l;
         for (l of this.lines)
             path += (path ? "L" : "M") + l.start.x + "," + l.start.y;
-        path += `L${l.end.x},${l.end.y}Z`;
+        if (!path) return "M0,0Z";
+        path += (l ? `L${l.end.x},${l.end.y}Z` : "");
         return path;
     }
 }

@@ -83,9 +83,10 @@ export class MapComponent {
         this.terrains = {};
         for (let path of <HTMLBaseElement[]>g.selectAll("path").nodes()) {
             let d = path.getAttribute("d");
-            let uid = (new Date).getTime() + "" + Math.random() * 10000;
+            let polys = Polygon.fromPath(d),
+                uid = polys[0].uid;
             path.setAttribute("uid", uid);
-            this.terrains[uid] = Polygon.fromPath(d);
+            this.terrains[uid] = polys;
         }
 
         this.drawPopulations();
@@ -112,29 +113,37 @@ export class MapComponent {
     clicked(e) {
         if (!this.population) return;
 
-        let popArea: Polygon,
-            newPoly: Polygon;
+        let pe = new Point({x: e.offsetX, y: e.offsetY});
+        if (this.tmpPoints.length)
+            return this.tmpPoints.push(pe);
 
-        [newPoly, popArea] = this.polyCursorAdjacent(e);
-        if (!newPoly) return;
-
-        if (popArea) {
-            popArea.merge(newPoly);
-        } else {
-            this.population.areas.push(newPoly);
-        }
-
-        this.drawPopulations();
+        let [popArea, adjPoint] = <any>this.population.areas.reduce(
+            (a, t) => (a[1] && a) || [t, this._searchClosePoint(pe, t)],
+            [null, null]
+        );
+        if (adjPoint) {
+            this.population.areas.splice(this.population.areas.findIndex(p => p + "" === "" + popArea), 1);
+            this.tmpPoints = popArea.vertices();
+            let part = this.tmpPoints.splice(this.tmpPoints.findIndex(a => a + "" === "" + adjPoint));
+            this.tmpPoints = part.concat(...this.tmpPoints);
+            this.drawPopulations();
+        } else
+            this.tmpPoints.push(pe);
     }
 
-    polyCursorAdjacent(event: any): [Polygon, Polygon] {
-        const el = event.target,
-            uid = el.getAttribute("uid");
-        if (!uid) {
-            console.log("No UID." + el.tagName);
-            return [null, null];
-        }
+    dblclick(e) {
+        if (!this.population) return;
 
+        if (this.tmpPoints.length > 2) {
+            this.population.areas.push(Polygon.fromVertices(this.tmpPoints));
+            this.tmpPoints = [];
+            this.drawPopulations();
+            return;
+        }
+        this.tmpPoints = [];
+    }
+
+    pointCursorAdjacent(pe: Point, uid = null): Point {
         let ppl = this.populations.find(p => p.name === uid);
         if (ppl) {
             if (ppl.name === this.population.name) return;
@@ -143,44 +152,66 @@ export class MapComponent {
         }
 
         let popArea: Polygon,
-            newPoly: Polygon,
-            pe = new Point({x: event.offsetX, y: event.offsetY});
+            adjPoint: Point;
 
         if (this.population) {
             // Search populations
-            [popArea, newPoly] = <any>this.population.areas.reduce(
-                (a, t) => (a[1] && a) || [t, this._getNewPoly(pe, t)],
+            [popArea, adjPoint] = <any>this.population.areas.reduce(
+                (a, t) => (a[1] && a) || [t, this._searchClosePoint(pe, t)],
                 [null, null]
             );
-            if (newPoly)
-                return [newPoly, popArea];
+            if (adjPoint)
+                return adjPoint;
         }
 
-        let terrain = this.terrains[uid];
-        newPoly = terrain && <Polygon>terrain.reduce((a, t) => a || this._getNewPoly(pe, t), null);
+        if (!uid) return null;
 
-        return [newPoly || Polygon.triangle(pe), null];
+        let terrain = this.terrains[uid];
+        adjPoint = terrain && <Point>terrain.reduce((a, t) => a || this._searchClosePoint(pe, t), null);
+
+        return adjPoint;
     }
 
     mousemove(e) {
-        let [newPoly, ] = this.polyCursorAdjacent(e);
-        if (!newPoly) return;
+        const el = e.target,
+            uid = el.getAttribute("uid");
+        if (!uid) {
+            console.log("No UID." + el.tagName);
+            return null;
+        }
+
+        let pe = new Point({x: e.offsetX, y: e.offsetY});
 
         d3.select("g.tessellate").remove();
         d3.select("svg").append("g").attr("class", "tessellate").attr("pointer-events", "none");
         let tsl = d3.select("g.tessellate");
 
+        let pts = this.tmpPoints.concat(this.pointCursorAdjacent(pe, uid) || pe),
+            poly = Polygon.fromVertices(pts);
         tsl.selectAll("path").remove();
-        tsl.selectAll("path")
-            .data([newPoly])
-            .enter()
-            .append("path")
-            .attr("fill", "yellow")
-            .attr("d", d => d.toPath());
+        tsl.selectAll("line").remove();
+        if (pts.length > 2)
+            tsl.selectAll("path")
+                .data([poly])
+                .enter()
+                .append("path")
+                .attr("fill", "yellow")
+                .attr("d", d => d.toPath() || "Z");
+        else if (pts.length === 2) {
+            tsl.selectAll("line")
+                .data([pts])
+                .enter()
+                .append("line")
+                .attr("stroke", "yellow")
+                .attr("x1", d => d[0].x)
+                .attr("y1", d => d[0].y)
+                .attr("x2", d => d[1].x)
+                .attr("y2", d => d[1].y);
+        }
 
         tsl.selectAll("circle").remove();
         tsl.selectAll("circle")
-            .data(newPoly.vertices())
+            .data(pts)
             .enter()
             .append("circle")
 
@@ -190,40 +221,15 @@ export class MapComponent {
             .attr("fill", this.population ? this.population.color.toString() : "green");
     }
 
-    protected _getNewPoly(pe: Point, poly: Polygon, maxDist: number = 30): Polygon {
-        let p: Polygon = null;
-        let lines: Line[] = poly.lines
-            .filter(l =>
-                l.start.x > 0 && l.start.y > 0 && l.start.x < this.width && l.start.y < this.height
-                && pe.dist(l.start) < maxDist
-            );
-        if (!lines.length) return null;
-
-        let vertices = lines.reduce((a, l) => a.concat(...l.vertices()), []);
-
-        let nlines = vertices.map( v => new Line({start: pe, end: v}))
-            .filter(l => !lines.reduce((a, _l) => a || _l.isIntersect(l), false));
-
-        let nvertices = nlines.reduce((a, l) => a.concat(...l.vertices()), []);
-
-        // remove duplicates
-        nvertices = nvertices.reduce((a, v) => a.reduce((_a, _v) => _a || _v.eq(v), false) ? a : a.concat(v), []);
-//        console.log("pe:" + pe, nvertices);
-        return Polygon.fromVertices(nvertices);
-    }
-
-    protected _searchClosestPoints(pe: Point, poly: Polygon, maxDist: number = 30): Point[] {
+    protected _searchClosePoint(pe: Point, poly: Polygon, maxDist: number = 5): Point {
         let lines: Line[] = poly.lines
             .filter(l =>
                 l.start.x > 0 && l.start.y > 0 && l.start.x < this.width && l.start.y < this.height
                 && pe.dist(l.start) < maxDist
             )
-            .sort((l1, l2) => {
-                return pe.dist(l1.start) + pe.dist(l1.end) - l1.start.dist(l1.end)
-                    - pe.dist(l2.start) - pe.dist(l2.end) + l2.start.dist(l2.end);
-            });
+            .sort((l1, l2) => pe.dist(l1.start) - pe.dist(l2.start));
         if (!lines.length) return null;
-        return [lines[0].start, lines[0].end];
+        return lines[0].start;
     }
 
     createPopulation() {
